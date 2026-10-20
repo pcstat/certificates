@@ -1,0 +1,29 @@
+{
+  "code": "CP26",
+  "title": "Competitive Programming — Basics & Algorithms",
+  "course": "Competitive Programming — Basics & Algorithms",
+  "date": "2026-07-10",
+  "template": "Certificate_C.svg",
+  "fields": {
+    "course1": "Competitive Programming",
+    "course2": "Basics & Algorithms",
+    "reason": "In recognition of outstanding dedication and excellence in the completion of",
+    "reason2": "demonstrating exceptional proficiency and commitment throughout the programme",
+    "modules": "12",
+    "hours": "120",
+    "person1": "Prof. D. Harrington",
+    "post1": "PROGRAMME DIRECTOR",
+    "person2": "Dr. S. Okafor",
+    "post2": "ACADEMIC REGISTRAR"
+  },
+  "recipients": [
+    {
+      "id": "CP26-7W34-88Q5",
+      "name": "Jane Smith",
+      "fields": {
+        "score": "92.5%",
+        "grade": "DISTINCTION"
+      }
+    }
+  ]
+}

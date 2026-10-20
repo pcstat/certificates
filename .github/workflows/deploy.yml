@@ -1,0 +1,67 @@
+name: Deploy certificates
+
+# Every change that lands on main (admin panel commit or manual edit):
+#   1. checks the registry and the shared rules (a bad commit publishes nothing — the old lookup files stay online),
+#   2. builds the public files (dist/) from the sets,
+#   3. uploads them to Cloudflare Pages — the project is created automatically if it is missing.
+# The website does NOT have to be rebuilt: it reads certificates in the browser, so a new certificate is
+# verifiable as soon as this workflow finishes.
+# Setup (secrets, project name): docs/DEPLOYMENT.md in the website repo and this repo's README.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "sets/**"
+      - "templates/**"
+      - "_headers"
+      - "scripts/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push waits instead of racing the running one.
+concurrency:
+  group: deploy-certificates
+  cancel-in-progress: false
+
+env:
+  # The Cloudflare Pages project name = the address <n>.pages.dev.
+  # Change it with a repository variable (Settings → Secrets and variables → Actions → Variables).
+  PROJECT_NAME: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'pcstat-certificates' }}
+
+jobs:
+  deploy:
+    # "[skip ci]" in the newest commit message of a push skips this run (GitHub does that by itself; the explicit
+    # check keeps the rule visible and identical in all repos). Manual runs ("Run workflow") are never skipped.
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Validate
+        run: node scripts/validate.mjs
+
+      - name: Test the shared rules
+        run: node scripts/test.mjs
+
+      - name: Build the public files
+        run: node scripts/build-dist.mjs
+
+      - name: Create the Cloudflare Pages project if it does not exist
+        run: node scripts/ensure-pages-project.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ env.PROJECT_NAME }} --branch=main

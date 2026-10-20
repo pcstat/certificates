@@ -1,0 +1,16 @@
+{
+  "name": "programming-club-certificates",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Certificate registry (batches of issued certificates + SVG templates) for the Statistics Programming Club",
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "validate": "node scripts/validate.mjs",
+    "test": "node scripts/test.mjs",
+    "build": "node scripts/build-dist.mjs"
+  }
+}

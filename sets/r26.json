@@ -1,0 +1,20 @@
+{
+  "code": "R26",
+  "title": "Introduction to R Programming — Spring 2026",
+  "course": "Introduction to R Programming",
+  "date": "2026-06-15",
+  "template": "Certificate_B.svg",
+  "fields": {
+    "reason2": "8-WEEK INTENSIVE PROGRAM · SPRING 2026",
+    "person1": "Dr. Sarah Mitchell",
+    "post1": "CLUB PRESIDENT",
+    "person2": "Prof. James Wei",
+    "post2": "CLUB MODERATOR"
+  },
+  "recipients": [
+    {
+      "id": "R26-ADMT-XQDG",
+      "name": "John Doe"
+    }
+  ]
+}

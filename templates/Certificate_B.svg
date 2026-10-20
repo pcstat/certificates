@@ -1,0 +1,128 @@
+<svg viewBox="0 0 1000 700" width="1000" height="700" xmlns="http://www.w3.org/2000/svg" xml:lang="en">
+  <defs>
+    <pattern id="dots" x="0" y="0" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="14" cy="14" r="1.1" fill="#C9A84C" fill-opacity="0.09"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1000" height="700" fill="#0C1A36"/>
+  <rect width="1000" height="700" fill="url(#dots)"/>
+
+  <!-- Outer border -->
+  <rect x="22" y="22" width="956" height="656" fill="none" stroke="#C9A84C" stroke-width="1.5"/>
+  <!-- Inner border -->
+  <rect x="32" y="32" width="936" height="636" fill="none" stroke="#C9A84C" stroke-width="0.5" stroke-opacity="0.38"/>
+
+  <!-- Corner brackets (outside outer border, pointing inward) -->
+  <polyline points="16,52 16,16 52,16" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="square"/>
+  <polyline points="948,16 984,16 984,52" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="square"/>
+  <polyline points="16,648 16,684 52,684" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="square"/>
+  <polyline points="948,684 984,684 984,648" fill="none" stroke="#C9A84C" stroke-width="1.5" stroke-linecap="square"/>
+
+  <!-- Hexagonal emblem (center top) -->
+  <g transform="translate(500, 85)">
+    <polygon points="0,-26 22.5,-13 22.5,13 0,26 -22.5,13 -22.5,-13"
+             fill="none" stroke="#C9A84C" stroke-width="1.5"/>
+    <line x1="0" y1="-26" x2="0" y2="26" stroke="#C9A84C" stroke-width="0.7" stroke-opacity="0.48"/>
+    <line x1="-22.5" y1="-13" x2="22.5" y2="13" stroke="#C9A84C" stroke-width="0.7" stroke-opacity="0.48"/>
+    <line x1="22.5" y1="-13" x2="-22.5" y2="13" stroke="#C9A84C" stroke-width="0.7" stroke-opacity="0.48"/>
+    <circle cx="0" cy="0" r="3.5" fill="#C9A84C"/>
+  </g>
+
+  <!-- Club name -->
+  <text x="500" y="144"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="11" letter-spacing="5" font-weight="400"
+        fill="#C9A84C" fill-opacity="0.9">STATISTICS PROGRAMMING CLUB</text>
+
+  <!-- Top horizontal rule -->
+  <line x1="80" y1="162" x2="920" y2="162" stroke="#C9A84C" stroke-width="0.6" stroke-opacity="0.38"/>
+
+  <!-- Certificate title -->
+  <text x="500" y="232"
+        text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="42" fill="#EDE8DC" letter-spacing="1">Certificate of Completion</text>
+
+  <!-- Diamond divider -->
+  <line x1="175" y1="262" x2="454" y2="262" stroke="#C9A84C" stroke-width="0.8" stroke-opacity="0.6"/>
+  <polygon points="500,254 509,262 500,270 491,262" fill="#C9A84C"/>
+  <line x1="546" y1="262" x2="825" y2="262" stroke="#C9A84C" stroke-width="0.8" stroke-opacity="0.6"/>
+
+  <!-- "This is to certify that" -->
+  <text x="500" y="310"
+        text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="14" font-style="italic"
+        fill="#C9A84C" fill-opacity="0.8">This is to certify that</text>
+
+  <!-- Recipient name -->
+  <text x="500" y="376"
+        text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="48" font-weight="700"
+        fill="#EDE8DC">{{name}}</text>
+
+  <!-- Name underline -->
+  <line x1="248" y1="393" x2="752" y2="393" stroke="#C9A84C" stroke-width="0.9" stroke-opacity="0.52"/>
+
+  <!-- Body text -->
+  <text x="500" y="430"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="13" font-weight="300"
+        fill="#EDE8DC" fill-opacity="0.65">has successfully completed</text>
+
+  <!-- Course name -->
+  <text x="500" y="470"
+        text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="23"
+        fill="#C9A84C">{{course}}</text>
+
+  <!-- Program details -->
+  <text x="500" y="504"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="10.5" letter-spacing="2.5" font-weight="300"
+        fill="#EDE8DC" fill-opacity="0.40">{{reason2}}</text>
+
+  <!-- Bottom horizontal rule -->
+  <line x1="80" y1="541" x2="920" y2="541" stroke="#C9A84C" stroke-width="0.6" stroke-opacity="0.32"/>
+
+  <!-- Left signature: Club President -->
+  <line x1="120" y1="612" x2="355" y2="612" stroke="#C9A84C" stroke-width="0.8" stroke-opacity="0.48"/>
+  <text x="237" y="630"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="9.5" letter-spacing="2.5"
+        fill="#C9A84C" fill-opacity="0.72">{{post1}}</text>
+  <text x="237" y="648"
+        text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="11.5" font-style="italic"
+        fill="#EDE8DC" fill-opacity="0.50">{{person1}}</text>
+
+  <!-- Center date with small ornament -->
+  <circle cx="500" cy="600" r="2.5" fill="none" stroke="#C9A84C" stroke-width="0.8" stroke-opacity="0.38"/>
+  <text x="500" y="618"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="10.5" letter-spacing="1.5"
+        fill="#EDE8DC" fill-opacity="0.38">{{date}}</text>
+
+  <!-- Right signature: Club Moderator -->
+  <line x1="645" y1="612" x2="880" y2="612" stroke="#C9A84C" stroke-width="0.8" stroke-opacity="0.48"/>
+  <text x="762" y="630"
+        text-anchor="middle"
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="9.5" letter-spacing="2.5"
+        fill="#C9A84C" fill-opacity="0.72">{{post2}}</text>
+  <text x="762" y="648"
+        text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="11.5" font-style="italic"
+        fill="#EDE8DC" fill-opacity="0.50">{{person2}}</text>
+</svg>

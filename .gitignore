@@ -1,0 +1,56 @@
+# Programming Club certificate registry (batches of issued certificates + SVG templates).
+# Only content belongs here: batches/, templates/, config.json, scripts/ and the workflows.
+
+# ── Build output of scripts/build-dist.mjs (the public lookup files uploaded to Cloudflare) ──
+dist/
+
+# ── Dependencies (the scripts use only Node built-ins, but keep these out if you ever add some) ──
+node_modules/
+.pnpm-store/
+.wrangler/
+
+# ── Environment & secrets (never commit) ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.pem
+*.key
+
+# ── Logs & debug output ───────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Editors, IDEs & OS files ──────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── AI-assistant tooling (local state) ────────────────────────────────────────
+.antigravitycli/
+.understand-anything/
+.claude/settings.local.json
+.claude/projects/
+CLAUDE.local.md
+
+# ── Patches & scratch ─────────────────────────────────────────────────────────
+*.patch
+*.diff
+*.orig
+*.rej
+*.zip
+tmp/
+temp/
+backup/

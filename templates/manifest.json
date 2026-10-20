@@ -1,0 +1,48 @@
+{
+  "templates": [
+    {
+      "file": "Certificate_A.svg",
+      "label": "Classic — cream and gold (landscape)",
+      "description": "Recipient, course, date and ID, two lines of text and two signatories.",
+      "fields": [
+        { "key": "reason", "label": "Opening line", "scope": "set", "default": "In recognition of outstanding dedication and excellence in the completion of" },
+        { "key": "reason2", "label": "Closing line", "scope": "set", "default": "demonstrating exceptional proficiency and commitment throughout the programme" },
+        { "key": "person1", "label": "Signatory 1", "scope": "set" },
+        { "key": "post1", "label": "Position 1", "scope": "set" },
+        { "key": "person2", "label": "Signatory 2", "scope": "set" },
+        { "key": "post2", "label": "Position 2", "scope": "set" }
+      ]
+    },
+    {
+      "file": "Certificate_B.svg",
+      "label": "Navy and gold (landscape)",
+      "description": "Recipient, course and date with one line of programme details and two signatories. The ID is not printed.",
+      "fields": [
+        { "key": "reason2", "label": "Programme line", "scope": "set", "help": "e.g. 8-WEEK INTENSIVE PROGRAM · SPRING 2026" },
+        { "key": "person1", "label": "Signatory 1", "scope": "set" },
+        { "key": "post1", "label": "Position 1", "scope": "set" },
+        { "key": "person2", "label": "Signatory 2", "scope": "set" },
+        { "key": "post2", "label": "Position 2", "scope": "set" }
+      ]
+    },
+    {
+      "file": "Certificate_C.svg",
+      "label": "Course certificate with results",
+      "description": "Two-line course title, modules, hours, and a score and grade for every recipient.",
+      "fields": [
+        { "key": "course1", "label": "Course title (line 1)", "scope": "set", "help": "Leave empty to print the whole course title on this line." },
+        { "key": "course2", "label": "Course title (line 2)", "scope": "set" },
+        { "key": "reason", "label": "Opening line", "scope": "set", "default": "In recognition of outstanding dedication and excellence in the completion of" },
+        { "key": "reason2", "label": "Closing line", "scope": "set", "default": "demonstrating exceptional proficiency and commitment throughout the programme" },
+        { "key": "modules", "label": "Modules", "scope": "set" },
+        { "key": "hours", "label": "Hours", "scope": "set" },
+        { "key": "score", "label": "Score", "scope": "recipient", "help": "e.g. 92.5%" },
+        { "key": "grade", "label": "Grade", "scope": "recipient", "help": "e.g. DISTINCTION" },
+        { "key": "person1", "label": "Signatory 1", "scope": "set" },
+        { "key": "post1", "label": "Position 1", "scope": "set" },
+        { "key": "person2", "label": "Signatory 2", "scope": "set" },
+        { "key": "post2", "label": "Position 2", "scope": "set" }
+      ]
+    }
+  ]
+}
