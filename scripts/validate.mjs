@@ -6,7 +6,7 @@
  *
  * Plain Node, no dependencies. The admin panel runs the same rules before it saves.
  */
-import { SET_CODE_RE, idCheck, isIsoDate, normalizeId, setFileName, splitId, templatePlaceholders } from "./lib/certificate-core.ts";
+import { PERSON_ID_RE, SET_CODE_RE, formatId, idCheck, isIsoDate, setFileName, templatePlaceholders } from "./lib/certificate-core.ts";
 import { BUILTIN_KEYS, exists, listSetFiles, readJson, readText } from "./lib/registry.mjs";
 
 const errors = [];
@@ -68,8 +68,8 @@ if (manifest) {
 }
 
 // ── sets (one file per set of certificates: sets/<code>.json) ───────────────
-const ID_TEXT = /^[A-Za-z0-9][A-Za-z0-9 -]{5,39}$/;
-const seen = new Map(); // normalized id → "file (recipient)"
+// A set file has two parts: "certificate" (the same on every certificate of the set) and "people"
+// (person id → person). The ID printed on a certificate is SPC-<code>-<person id>.
 let certificateCount = 0;
 
 const files = listSetFiles();
@@ -82,14 +82,20 @@ for (const rel of files) {
     if (set !== null) err(rel, "must contain a JSON object");
     continue;
   }
-  if (!SET_CODE_RE.test(set.code ?? "")) err(rel, `"code" must be 2–12 capital letters or digits, starting with a letter, without I, L, O or U (got "${set.code ?? ""}")`);
+  if (!SET_CODE_RE.test(set.code ?? "")) err(rel, `"code" must be 2–12 capital letters or digits, starting with a letter (got "${set.code ?? ""}")`);
   else if (setFileName(set.code) !== `${stem}.json`) err(rel, `the file must be named ${setFileName(set.code)} to match its code "${set.code}"`);
-  for (const f of ["title", "course"]) if (!nonEmpty(set[f])) err(rel, `"${f}" is required`);
-  if (!isIsoDate(set.date)) err(rel, `"date" must be a real date written 2026-06-15 (got "${set.date ?? ""}")`);
-  if (set.course_id !== undefined && !nonEmpty(set.course_id)) err(rel, `"course_id" must be a course id from courses.json, or left out`);
 
-  const tpl = templates.get(set.template);
-  if (!tpl) err(rel, `template "${set.template ?? ""}" is not listed in templates/manifest.json`);
+  // ── part 1: the certificate ──
+  const cert = set.certificate;
+  if (!isObject(cert)) {
+    err(rel, `"certificate" (the part shared by everyone in the set) is missing`);
+    continue;
+  }
+  if (!nonEmpty(cert.title)) err(rel, `certificate.title is required — what the certificates are for`);
+  if (!isIsoDate(cert.date)) err(rel, `certificate.date must be a real date written 2026-06-15 (got "${cert.date ?? ""}")`);
+  if (cert.course_id !== undefined && !nonEmpty(cert.course_id)) err(rel, `certificate.course_id must be a course id from courses.json, or left out`);
+  const tpl = templates.get(cert.template);
+  if (!tpl) err(rel, `certificate.template "${cert.template ?? ""}" is not listed in templates/manifest.json`);
 
   const checkFields = (where, fields, allowed) => {
     if (fields === undefined) return;
@@ -98,36 +104,37 @@ for (const rel of files) {
       if (typeof value !== "string") err(rel, `${where}: field "${key}" must be text`);
       if (tpl && !allowed.includes(key)) {
         const declared = tpl.fields.get(key);
-        err(rel, declared ? `${where}: field "${key}" belongs to ${declared.scope === "set" ? "the whole set, not to a single recipient" : "a single recipient, not to the set"}` : `${where}: template ${set.template} has no field "${key}"`);
+        err(rel, declared ? `${where}: field "${key}" belongs to ${declared.scope === "set" ? "the certificate part, not to a person" : "a person, not to the certificate part"}` : `${where}: template ${cert.template} has no field "${key}"`);
       }
     }
   };
   const scoped = (...scopes) => (tpl ? [...tpl.fields.values()].filter((f) => scopes.includes(f.scope)).map((f) => f.key) : []);
-  checkFields("set", set.fields, scoped("set", "either"));
+  checkFields("certificate", cert.fields, scoped("set", "either"));
 
-  if (!Array.isArray(set.recipients)) {
-    err(rel, `"recipients" must be a list`);
+  // ── part 2: the people ──
+  if (!isObject(set.people)) {
+    err(rel, `"people" must be an object: person id → person`);
     continue;
   }
-  if (set.recipients.length === 0) warn(rel, "the set has no recipients yet");
-  if (set.recipients.length > 3000) warn(rel, `${set.recipients.length} recipients in one file — the verification page downloads the whole file for every lookup; consider a second set`);
+  const entries = Object.entries(set.people);
+  // JSON.parse silently keeps the last of two equal keys, which would drop a person: look for repeats in the text.
+  const keyCount = [...readText(rel).matchAll(/"([0-9A-HJKMNP-TV-Z]{5})"\s*:\s*\{/g)].length;
+  if (keyCount > entries.filter(([pid]) => PERSON_ID_RE.test(pid)).length) err(rel, `a person id appears twice in "people" — ids must be unique inside the file`);
+  if (entries.length === 0) warn(rel, "the set has no people yet");
+  if (entries.length > 5000) warn(rel, `${entries.length} people in one file — the verification page downloads the whole file for every lookup; consider a second set`);
 
   const names = new Map();
   const empty = new Map(); // placeholder → number of certificates that print nothing for it
-  set.recipients.forEach((r, i) => {
-    const who = `recipient ${i + 1}${isObject(r) && r.name ? ` (${r.name})` : ""}`;
-    if (!isObject(r)) return err(rel, `${who}: must be an object`);
-    if (!nonEmpty(r.name)) err(rel, `${who}: "name" is required`);
-    if (!nonEmpty(r.id) || !ID_TEXT.test(r.id)) err(rel, `${who}: "id" must be 6–40 letters, digits, spaces or hyphens (got "${r.id ?? ""}")`);
-    else {
-      const key = normalizeId(r.id);
-      const parts = splitId(r.id);
-      if (!parts || parts.set !== set.code) err(rel, `${who}: the ID "${r.id}" must start with the set code "${set.code}" and end with 8 characters (e.g. ${set.code}-K7M4-9QXC) — that is how the website finds this file`);
-      if (seen.has(key)) err(rel, `${who}: the ID "${r.id}" is already used by ${seen.get(key)}`);
-      else seen.set(key, `${rel} (${r.name})`);
-      if (idCheck(r.id) === "invalid") warn(rel, `${who}: the ID "${r.id}" has a wrong check character — was it typed by hand? Its holders will be told they mistyped it`);
+  for (const [pid, r] of entries) {
+    const who = `person ${pid}${isObject(r) && r.name ? ` (${r.name})` : ""}`;
+    if (!PERSON_ID_RE.test(pid)) err(rel, `${who}: a person id is exactly 5 characters from 0-9 and A-Z without I, L, O, U (got "${pid}")`);
+    else if (idCheck(formatId(set.code ?? "XX", pid)) === "invalid") warn(rel, `${who}: the check character of "${pid}" is wrong — was it typed by hand? The website will call this ID mistyped even when it is entered exactly`);
+    if (!isObject(r)) {
+      err(rel, `${who}: must be an object`);
+      continue;
     }
     certificateCount += 1;
+    if (!nonEmpty(r.name)) err(rel, `${who}: "name" is required`);
     checkFields(who, r.fields, scoped("recipient", "either"));
     if (r.note !== undefined && typeof r.note !== "string") err(rel, `${who}: "note" must be text`);
     if (r.revoked !== undefined) {
@@ -136,15 +143,15 @@ for (const rel of files) {
     }
     if (nonEmpty(r.name)) names.set(r.name.trim().toLowerCase(), (names.get(r.name.trim().toLowerCase()) ?? 0) + 1);
     if (tpl) {
-      const values = { ...(isObject(set.fields) ? set.fields : {}), ...(isObject(r.fields) ? r.fields : {}) };
+      const values = { ...(isObject(cert.fields) ? cert.fields : {}), ...(isObject(r.fields) ? r.fields : {}) };
       for (const key of tpl.placeholders ?? []) {
-        if (BUILTIN_KEYS.includes(key) || key === "course1") continue; // course1 falls back to the course
+        if (BUILTIN_KEYS.includes(key) || key === "course1") continue; // course1 falls back to the title
         if (!nonEmpty(values[key])) empty.set(key, (empty.get(key) ?? 0) + 1);
       }
     }
-  });
+  }
   for (const [name, n] of names) if (n > 1) warn(rel, `"${name}" appears ${n} times in this set (a duplicate, or two people with the same name?)`);
-  for (const [key, n] of empty) warn(rel, `${n} certificate${n === 1 ? "" : "s"} print nothing for {{${key}}} on ${set.template}`);
+  for (const [key, n] of empty) warn(rel, `${n} certificate${n === 1 ? "" : "s"} print nothing for {{${key}}} on ${cert.template}`);
 }
 
 // ── report ───────────────────────────────────────────────────────────────────

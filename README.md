@@ -5,23 +5,24 @@ Every certificate the club issues, one JSON file per **set**, plus the SVG desig
 This repository is separate from the content database (`pcstat/database`) because there will be thousands of certificates: they change often, must not rebuild the website, and need their own history.
 
 ```
-sets/<code>.json          one set = one course run, e.g. sets/py26.json, sets/spss26.json
+sets/<code>.json          one set = one group of certificates (a course run, a contest …), e.g. sets/py26.json
 templates/                the SVG designs + manifest.json (which fields each design prints)
 scripts/                  validate · build-dist · test (plain Node, no dependencies)
-scripts/lib/certificate-core.ts   the shared rules (ID format, dates, safe template filling)
+scripts/lib/certificate-core.ts   the shared rules (ID format, merging the two parts, dates, safe template filling)
 _headers                  CORS, so the website can read the published files
 .github/workflows/        deploy.yml (validate → build → Cloudflare Pages) · validate.yml (pull requests)
 ```
 
 ## How verification works
 
-1. Every certificate ID starts with its **set code**: `PY26-K7M4-9QXC`.
-2. The website takes the code from the ID and opens exactly **`/sets/py26.json`** on this repo's site — nothing is searched, however many sets exist.
-3. The record is in that file under the *normalized* ID. IDs are forgiving: `py26 k7m4 9qxc`, `PY26K7M49QXC` and `Py26-k7m4-9qxc` are the same ID, and the look-alikes O/0 and I,L/1 are treated as one.
-4. The last character of an ID is a **check character** (Luhn mod 32). If a typed ID is not found *and* its check character is wrong, the page says "this ID contains a typing mistake" instead of "no such certificate". The check catches every single wrong character and almost every swap of two neighbouring characters.
-5. `/certificate/view?id=…` (short link `/c/<ID>` on the website) is the page of one certificate: the SVG design filled in, a Download button, a share link. A revoked certificate shows as **revoked** and no document.
+1. A printed ID is **`SPC-<set code>-<person id>`**, for example `SPC-PY26-7W34N`. The set code names the file; the person id names a person inside it. The person id is only 5 characters (4 + a check character) and only has to be unique **inside its own file** — it is not repeated in the file name.
+2. The website takes the set code from the ID and opens exactly **`/sets/py26.json`** on this repo's site — nothing is searched, however many sets exist.
+3. The first part of that file (`certificate`) holds what is the same on every certificate of the set; the second part (`people`) holds each person's details. The website **merges the two parts** and fills the SVG design in.
+4. IDs are forgiving: `spc py26 7w34n`, `SPCPY267W34N` and `Spc-Py26-7w34n` are the same ID, and in the person id the look-alikes O/0 and I,L/1 are one character.
+5. The last character of a person id is a **check character** (Luhn mod 32). If a typed ID is not found *and* its check character is wrong, the page says "this ID contains a typing mistake" instead of "no such certificate". The check catches every single wrong character and almost every swap of two neighbouring characters.
+6. `/certificate/view?id=…` (short link `/c/<ID>` on the website) is the page of one certificate: the design filled in, a Download button, a share link. A revoked certificate shows as **revoked** and no document.
 
-A new certificate can be verified about a minute after the commit, **without rebuilding the website**.
+A certificate does **not** need a course: the set's `title` is whatever it is for — a course, a contest, a year of membership. A new certificate can be verified about a minute after the commit, **without rebuilding the website**.
 
 ## Files
 
@@ -30,37 +31,37 @@ A new certificate can be verified about a minute after the commit, **without reb
 ```json
 {
   "code": "PY26",
-  "title": "Python for Data Analysis — Spring 2026",
-  "course": "Python for Data Analysis",
-  "course_id": "c-1a2b3c4d",
-  "date": "2026-04-30",
-  "template": "Certificate_B.svg",
-  "fields": { "reason2": "8-WEEK INTENSIVE PROGRAM", "person1": "Dr. Sarah Mitchell", "post1": "CLUB PRESIDENT" },
-  "recipients": [
-    { "id": "PY26-K7M4-9QXC", "name": "Alexandra Fontaine", "note": "alex@example.com" },
-    { "id": "PY26-NACQ-AP1G", "name": "John Doe", "revoked": { "date": "2026-08-01", "reason": "Issued in error" } }
-  ]
+  "certificate": {
+    "title": "Python for Data Analysis — Spring 2026",
+    "date": "2026-04-30",
+    "template": "Certificate_B.svg",
+    "course_id": "c-1a2b3c4d",
+    "fields": { "reason2": "8-WEEK INTENSIVE PROGRAM", "person1": "Dr. Sarah Mitchell", "post1": "CLUB PRESIDENT" }
+  },
+  "people": {
+    "7W34N": { "name": "Alexandra Fontaine", "note": "alex@example.com" },
+    "K7M43": { "name": "John Doe", "fields": { "grade": "PASS" }, "revoked": { "date": "2026-08-01", "reason": "Issued in error" } }
+  }
 }
 ```
 
 | Field | Meaning |
 |---|---|
-| `code` | 2–12 capital letters or digits, starting with a letter, without I, L, O, U. **The file must be named `<code in lower case>.json`.** Never change it after issuing: IDs start with it. |
-| `title` | For people. Not printed. |
-| `course` | The course title printed (and shown on the verification page). |
-| `course_id` | Optional: id of the course in the database's `courses.json`. |
-| `date` | The issue date printed, `YYYY-MM-DD`. |
-| `template` | A file listed in `templates/manifest.json`. |
-| `fields` | Values the design prints that are the same for the whole set (signatories, hours …). |
-| `recipients[].id` | Generated by the admin panel: set code + 8 characters. Must start with the set code and be unique across all sets. |
-| `recipients[].name` | Printed. |
-| `recipients[].fields` | Values that differ per person (score, grade) — only those the design declares. |
-| `recipients[].note` | Internal (e-mail, roll number). **Never published**, but it is in this repository: keep the repository private if you store personal details. |
-| `recipients[].revoked` | `{ "date", "reason" }` — the certificate is withdrawn. Never delete an issued certificate; revoke it. |
+| `code` | 2–12 capital letters or digits, starting with a letter. **The file must be named `<code in lower case>.json`.** Never change it after issuing: IDs contain it. |
+| `certificate.title` | What the certificates are for. Printed (in the design's `{{course}}` / `{{title}}` slot) and shown on the verification page. |
+| `certificate.date` | The date printed, `YYYY-MM-DD`. |
+| `certificate.template` | A file listed in `templates/manifest.json`. |
+| `certificate.course_id` | Optional: id of a course in the database's `courses.json`. A link for overview only. |
+| `certificate.fields` | Values the design prints that are the same for everyone (signatories, hours …). |
+| `people.<id>` | The key is the person id: exactly 5 characters from `0-9 A-Z` without I, L, O, U, unique inside this file. Generated by the admin panel. |
+| `people.<id>.name` | Printed. |
+| `people.<id>.fields` | Values that differ per person (score, grade) — only those the design declares. They override the set's value for the same key. |
+| `people.<id>.note` | Internal (e-mail, roll number). **Never published**, but it is in this repository: keep the repository private if you store personal details. |
+| `people.<id>.revoked` | `{ "date", "reason" }` — the certificate is withdrawn. Never delete an issued person; revoke them. |
 
 ### `templates/manifest.json`
 
-Lists each design (`file`, `label`) and its fields: `key` (the `{{key}}` in the SVG), `label`, `scope` (`set` — the same for all, `recipient` — differs per person, `either`), optional `default` and `help`. `name`, `id`, `date` and `course` are filled in automatically. The validator checks that the SVG and the manifest agree. To add a design: put the SVG in `templates/`, add it to the manifest.
+Lists each design (`file`, `label`) and its fields: `key` (the `{{key}}` in the SVG), `label`, `scope` (`set` — the same for all, `recipient` — differs per person, `either`), optional `default` and `help`. `name`, `id`, `date` and `title` (also available as `course`) are filled in automatically. The validator checks that the SVG and the manifest agree. To add a design: put the SVG in `templates/`, add it to the manifest.
 
 Values are XML-escaped when a design is filled in (a name like `Tom & Jerry` or `<b>` cannot break or inject into the SVG) and every placeholder is replaced in a single pass.
 
@@ -70,7 +71,7 @@ Values are XML-escaped when a design is filled in (a name like `Tom & Jerry` or 
 
 1. `scripts/validate.mjs` — all rules; **a failing commit publishes nothing** and the previous files stay online.
 2. `scripts/test.mjs` — fixed test vectors for the shared rules.
-3. `scripts/build-dist.mjs` → `dist/`: `sets/<code>.json` (records keyed by normalized ID, without internal notes), `templates/`, `meta.json`, `_headers`.
+3. `scripts/build-dist.mjs` → `dist/`: `sets/<code>.json` (the same two parts, without internal notes), `templates/`, `meta.json`, `_headers`.
 4. Upload to Cloudflare Pages (project `pcstat-certificates`, created if missing).
 
 Secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. Optional variable `CLOUDFLARE_PROJECT_NAME`. Setup of the whole chain: `docs/DEPLOYMENT.md` §14 in the website repo.
@@ -79,7 +80,7 @@ Commands (Node 24+): `node scripts/validate.mjs` · `node scripts/test.mjs` · `
 
 ## Size
 
-The whole set file is downloaded for every lookup. 4,000 certificates are about 1.3 MB of JSON, **about 75 KB** as served (compressed). The validator warns above 3,000 recipients in one set: start a second set (`PY26B`) rather than growing one without limit.
+The whole set file is downloaded for every lookup. The set's shared part is stored once, so a person costs about 35 bytes: **4,000 people are about 146 KB of JSON, about 38 KB as served** (compressed). The validator warns above 5,000 people in one set: start a second set (`PY26B`) rather than growing one without limit.
 
 ## The shared rules file
 

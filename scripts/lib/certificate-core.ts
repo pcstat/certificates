@@ -1,56 +1,87 @@
 /**
- * The rules every part of the certificate system shares: the ID format, the date format and how a certificate
- * template is filled in.
+ * The rules every part of the certificate system shares: the ID format, the date format, how the two parts of a set
+ * file are merged into one certificate, and how a certificate template is filled in.
  *
  * THIS FILE EXISTS IN THREE REPOSITORIES AND MUST STAY IDENTICAL:
  *   certificates  scripts/lib/certificate-core.ts   (validator and build script, run by Node)
  *   admin         src/lib/certificates/core.ts       (issuing, searching, preview)
  *   website       src/lib/certificates/core.ts       (verification page and certificate viewer)
  * It has no imports and uses only syntax that Node can run directly, so the same file works everywhere.
- * `pnpm test` in the certificates repo checks the rules with fixed test vectors.
+ * `node scripts/test.mjs` in the certificates repo checks the rules with fixed test vectors.
  *
- * The idea: certificates are stored in one file per SET (a course run: "PY26", "SPSS26"). Every ID starts with its
- * set's code, so whoever has an ID knows which single file to open — no index, no searching.
+ * The idea: certificates are stored one file per SET (sets/py26.json). A set file has two parts:
+ *   "certificate"  what is the same on every certificate of the set (design, title, date, signatories …) — written once;
+ *   "people"       one entry per person, keyed by a short PERSON ID that only has to be unique inside this file.
+ * A printed ID is  SPC-<set code>-<person id>  (SPC-PY26-7W348): the set code names the file to open, the person id
+ * names the entry in it. Merging the two parts gives the certificate, so nothing is searched and nothing is repeated.
  */
 
 /** Crockford's base 32: digits and capitals without I, L, O, U — nothing that can be mistaken for something else. */
 export const ID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-/** A set code: the short name of one set of certificates ("PY26"). Letters and digits of ID_ALPHABET only, starting with a letter. */
-export const SET_CODE_RE = /^[A-HJKMNP-TV-Z][0-9A-HJKMNP-TV-Z]{1,11}$/;
+/** A set code: the short name of one set file ("PY26", "CONTEST26"). Capital letters and digits, starting with a letter. */
+export const SET_CODE_RE = /^[A-Z][A-Z0-9]{1,11}$/;
 
-/** Length of the end of every ID: 7 random characters + 1 check character. */
-const TAIL_LENGTH = 8;
-
-/** One certificate as the public verification files store it (and as the website reads it). */
-export interface CertificateRecord {
-  /** The ID as printed on the certificate, e.g. "PY26-K7M4-9QXC". */
-  id: string;
-  recipient: string;
-  /** Course title as printed. */
-  course: string;
+/** What is printed on every certificate of a set (the first part of the file). Nothing personal. */
+export interface CertificateSection {
+  /** What the certificate is for, printed and shown on the verification page: a course, a contest, "Active member 2026" … */
+  title: string;
   /** ISO date, 2026-06-15. */
   date: string;
-  /** File name of the SVG template, e.g. "Certificate_B.svg". */
+  /** File name of the SVG design, e.g. "Certificate_B.svg". */
+  template: string;
+  /** Optional link to a course in the database's courses.json. A certificate does not need a course. */
+  course_id?: string;
+  /** Everything else the design prints that is the same for all (reason, signatories, hours …). */
+  fields?: Record<string, string>;
+}
+
+/** One person of a set (the second part of the file). */
+export interface PersonEntry {
+  name: string;
+  /** Values that differ per person (score, grade …). */
+  fields?: Record<string, string>;
+  /** Internal note. Never published. */
+  note?: string;
+  revoked?: { date: string; reason?: string };
+}
+
+/** A set file, sets/<code>.json. */
+export interface SetFile {
+  code: string;
+  certificate: CertificateSection;
+  /** Person id → person. The id is 5 characters (4 + a check character) and only has to be unique inside this file. */
+  people: Record<string, PersonEntry>;
+}
+
+/** One finished certificate: the set's part and the person's part merged. */
+export interface CertificateRecord {
+  /** The ID as printed: SPC-PY26-7W348. */
+  id: string;
+  recipient: string;
+  title: string;
+  date: string;
   template: string;
   status: "valid" | "revoked";
   revoked_at?: string;
   revoked_reason?: string;
-  /** Every other value the template prints (reason, signatories, score, grade …). */
+  /** Every value the design prints besides name / id / date / title: the set's, overridden by the person's. */
   fields: Record<string, string>;
 }
 
 /**
- * The form of an ID that is the same however it is typed: capitals only, no dashes or spaces, and the look-alike
- * characters O → 0, I and L → 1. "spc-2026-k7m4-9qxc", "SPC 2026 K7M4 9QXC" and "SPC2026K7M49QXC" are one ID.
- * This is the key under which a certificate is stored and looked up.
+ * The form of an ID that is the same however it is typed: capitals and digits only, no dashes or spaces.
+ * "spc-py26-7w34n", "SPC PY26 7W34N" and "SPCPY267W34N" are one ID.
  */
 export function normalizeId(input: unknown): string {
   return String(input ?? "")
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .replace(/O/g, "0")
-    .replace(/[IL]/g, "1");
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+/** The look-alike characters of a person id are one character each: O → 0, I and L → 1 (person ids never contain I, L, O). */
+export function foldLookalikes(text: string): string {
+  return text.replace(/O/g, "0").replace(/[IL]/g, "1");
 }
 
 /** Luhn mod 32: the check character of `body` (characters of ID_ALPHABET). Catches every single typo and most swaps. */
@@ -69,17 +100,31 @@ export function checkChar(body: string): string {
   return ID_ALPHABET[(n - (sum % n)) % n] as string;
 }
 
+/** Every certificate ID starts with this. */
+export const ID_PREFIX = "SPC";
+/** Person ids are exactly this long: 4 random characters + 1 check character. */
+export const PERSON_ID_LENGTH = 5;
+export const PERSON_ID_RE = /^[0-9A-HJKMNP-TV-Z]{5}$/;
+
 /**
- * Splits an ID into the code of its set and its 8-character tail: "py26-k7m4-9qxc" → { set: "PY26", tail: "K7M49QXC" }.
- * The set code is what tells which file holds the certificate (sets/py26.json), so nothing else has to be searched.
+ * Splits an ID into the code of its set and its person id: "spc py26 7w348" → { set: "PY26", person: "7W348" }.
+ * The set code names the file (sets/py26.json); the person id names the entry in it. Because the person id has a fixed
+ * length, the ID is read the same however it was typed (dashes, spaces, case, O for 0).
  * Returns null when the input cannot be an ID of this system.
  */
-export function splitId(input: unknown): { set: string; tail: string } | null {
+export function splitId(input: unknown): { set: string; person: string } | null {
   const key = normalizeId(input);
-  if (key.length < TAIL_LENGTH + 2) return null;
-  const set = key.slice(0, key.length - TAIL_LENGTH);
-  const tail = key.slice(key.length - TAIL_LENGTH);
-  return SET_CODE_RE.test(set) && /^[0-9A-HJKMNP-TV-Z]+$/.test(tail) ? { set, tail } : null;
+  if (!key.startsWith(ID_PREFIX)) return null;
+  const rest = key.slice(ID_PREFIX.length);
+  if (rest.length < PERSON_ID_LENGTH + 2) return null;
+  const set = rest.slice(0, rest.length - PERSON_ID_LENGTH);
+  const person = foldLookalikes(rest.slice(rest.length - PERSON_ID_LENGTH));
+  return SET_CODE_RE.test(set) && PERSON_ID_RE.test(person) ? { set, person } : null;
+}
+
+/** The printed form of an ID: "PY26", "7W348" → "SPC-PY26-7W348". */
+export function formatId(setCode: string, person: string): string {
+  return `${ID_PREFIX}-${setCode}-${person}`;
 }
 
 /** The set file name for a set code: "PY26" → "py26.json" (the file lives at sets/py26.json). */
@@ -95,22 +140,49 @@ export function setFileName(code: string): string {
 export function idCheck(input: unknown): "valid" | "invalid" | "other" {
   const parts = splitId(input);
   if (!parts) return "other";
-  return checkChar(parts.tail.slice(0, TAIL_LENGTH - 1)) === parts.tail[TAIL_LENGTH - 1] ? "valid" : "invalid";
+  return checkChar(parts.person.slice(0, PERSON_ID_LENGTH - 1)) === parts.person[PERSON_ID_LENGTH - 1] ? "valid" : "invalid";
 }
 
-/** A new random ID of a set, such as "PY26-K7M4-9QXC", that is not in `taken` (normalized IDs, as a Set or any list). */
-export function generateId(setCode: string, taken: Iterable<string> = []): string {
-  if (!SET_CODE_RE.test(setCode)) throw new Error(`The set code must be 2–12 letters or digits, starting with a letter, without I, L, O or U — got "${setCode}".`);
+/** A new random person id such as "7W348" that is not in `taken` (the person ids already used in this one file). */
+export function generatePersonId(taken: Iterable<string> = []): string {
   const used = taken instanceof Set ? (taken as Set<string>) : new Set(taken);
   for (;;) {
-    const bytes = new Uint8Array(TAIL_LENGTH - 1);
+    const bytes = new Uint8Array(PERSON_ID_LENGTH - 1);
     globalThis.crypto.getRandomValues(bytes);
     let body = "";
     for (const b of bytes) body += ID_ALPHABET[b % 32];
-    const tail = body + checkChar(body);
-    const id = `${setCode}-${tail.slice(0, 4)}-${tail.slice(4)}`;
-    if (!used.has(normalizeId(id))) return id;
+    const id = body + checkChar(body);
+    if (!used.has(id)) return id;
   }
+}
+
+/**
+ * Merges the two parts of a set file into one certificate. Returns null when the person is not in the file.
+ * `person` may be typed any way (any case, O for 0 …): both sides are compared in normalized form.
+ */
+export function resolveCertificate(file: SetFile, person: string): CertificateRecord | null {
+  const wanted = foldLookalikes(normalizeId(person));
+  const stored = Object.keys(file.people).find((k) => foldLookalikes(normalizeId(k)) === wanted);
+  const entry = stored ? file.people[stored] : undefined;
+  if (!stored || !entry) return null;
+  const fields: Record<string, string> = {};
+  for (const source of [file.certificate.fields, entry.fields]) {
+    for (const [k, v] of Object.entries(source ?? {})) if (typeof v === "string" && v.trim() !== "") fields[k] = v;
+  }
+  const record: CertificateRecord = {
+    id: formatId(file.code, stored),
+    recipient: entry.name,
+    title: file.certificate.title,
+    date: file.certificate.date,
+    template: file.certificate.template,
+    status: entry.revoked ? "revoked" : "valid",
+    fields,
+  };
+  if (entry.revoked) {
+    record.revoked_at = entry.revoked.date;
+    if (entry.revoked.reason) record.revoked_reason = entry.revoked.reason;
+  }
+  return record;
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -150,14 +222,18 @@ export function renderTemplate(svg: string, values: Record<string, string | unde
   return svg.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (_, key: string) => escapeXml(values[key] ?? ""));
 }
 
-/** The values a template prints for one certificate. `course1` falls back to the course (templates with a one-line course). */
-export function templateValues(record: Pick<CertificateRecord, "id" | "recipient" | "course" | "date" | "fields">): Record<string, string> {
+/**
+ * The values a template prints for one certificate. The title is printed in the `{{course}}` / `{{title}}` slot;
+ * `course1` falls back to it (designs with a one-line title).
+ */
+export function templateValues(record: Pick<CertificateRecord, "id" | "recipient" | "title" | "date" | "fields">): Record<string, string> {
   return {
-    course1: record.course,
+    course1: record.title,
     ...record.fields,
     name: record.recipient,
     id: record.id,
     date: formatDateLong(record.date),
-    course: record.course,
+    course: record.title,
+    title: record.title,
   };
 }

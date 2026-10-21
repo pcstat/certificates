@@ -1,21 +1,21 @@
 {
   "code": "DS26",
-  "title": "Advanced Data Science & Machine Learning — 2026",
-  "course": "Advanced Data Science & Machine Learning",
-  "date": "2026-05-23",
-  "template": "Certificate_A.svg",
-  "fields": {
-    "reason": "In recognition of outstanding dedication and excellence in the completion of",
-    "reason2": "demonstrating exceptional proficiency and commitment throughout the programme",
-    "person1": "Prof. D. Harrington",
-    "post1": "PROGRAMME DIRECTOR",
-    "person2": "Dr. S. Okafor",
-    "post2": "ACADEMIC REGISTRAR"
+  "certificate": {
+    "title": "Advanced Data Science & Machine Learning",
+    "date": "2026-05-23",
+    "template": "Certificate_A.svg",
+    "fields": {
+      "reason": "In recognition of outstanding dedication and excellence in the completion of",
+      "reason2": "demonstrating exceptional proficiency and commitment throughout the programme",
+      "person1": "Prof. D. Harrington",
+      "post1": "PROGRAMME DIRECTOR",
+      "person2": "Dr. S. Okafor",
+      "post2": "ACADEMIC REGISTRAR"
+    }
   },
-  "recipients": [
-    {
-      "id": "DS26-7CQP-ZS8S",
+  "people": {
+    "AHQJQ": {
       "name": "Alexandra Fontaine"
     }
-  ]
+  }
 }

@@ -2,21 +2,18 @@
 /**
  * Builds the public files into ./dist — exactly what is uploaded to Cloudflare Pages.
  *
- *   node scripts/build-dist.mjs          (or: pnpm build)
+ *   node scripts/build-dist.mjs          (or: node scripts/build-dist.mjs)
  *
- *   dist/sets/<code>.json   one file per set: { code, title, course, records: { "<normalized id>": CertificateRecord } }.
- *                           The ID starts with the set code, so the website opens exactly this one file.
+ *   dist/sets/<code>.json   one file per set: { code, certificate, people } — the set file without internal notes.
+ *                           The ID SPC-<code>-<person> says which file to open and which person to read in it.
  *   dist/meta.json          totals and the build time
- *   dist/templates/         the SVG templates and their manifest
+ *   dist/templates/         the SVG designs and their manifest
  *   dist/_headers           CORS, so the website can read all of this in the browser
- *
- * What is NOT published: internal `note`s. Sets that are being prepared are published like any other, so only
- * commit finished ones.
  */
 import fs from "node:fs";
 import path from "node:path";
-import { normalizeId, setFileName } from "./lib/certificate-core.ts";
-import { ROOT, listSetFiles, readJson, toRecord } from "./lib/registry.mjs";
+import { setFileName } from "./lib/certificate-core.ts";
+import { ROOT, listSetFiles, publicSet, readJson } from "./lib/registry.mjs";
 
 const DIST = path.join(ROOT, "dist");
 fs.rmSync(DIST, { recursive: true, force: true });
@@ -28,16 +25,13 @@ let revoked = 0;
 const sets = [];
 for (const file of listSetFiles()) {
   const set = readJson(file);
-  const records = {};
-  for (const recipient of set.recipients ?? []) {
-    records[normalizeId(recipient.id)] = toRecord(set, recipient);
-    total += 1;
-    if (recipient.revoked) revoked += 1;
-  }
-  fs.writeFileSync(path.join(DIST, "sets", setFileName(set.code)), JSON.stringify({ code: set.code, title: set.title, course: set.course, records }));
-  sets.push({ code: set.code, count: Object.keys(records).length });
+  const people = Object.values(set.people ?? {});
+  total += people.length;
+  revoked += people.filter((p) => p.revoked).length;
+  fs.writeFileSync(path.join(DIST, "sets", setFileName(set.code)), JSON.stringify(publicSet(set)));
+  sets.push({ code: set.code, count: people.length });
 }
-fs.writeFileSync(path.join(DIST, "meta.json"), JSON.stringify({ version: 2, generated: new Date().toISOString(), total, valid: total - revoked, revoked, sets }) + "\n");
+fs.writeFileSync(path.join(DIST, "meta.json"), JSON.stringify({ version: 3, generated: new Date().toISOString(), total, valid: total - revoked, revoked, sets }) + "\n");
 
 const manifest = readJson("templates/manifest.json");
 fs.copyFileSync(path.join(ROOT, "templates", "manifest.json"), path.join(DIST, "templates", "manifest.json"));
