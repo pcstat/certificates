@@ -43,6 +43,12 @@ export interface PersonEntry {
   fields?: Record<string, string>;
   /** Internal note. Never published. */
   note?: string;
+  /**
+   * Link key: the value that identifies this person in the club's OWN sheet (roll number, student id …), so that an
+   * exported list of certificate IDs can be joined to the sheet that holds the e-mail addresses (like a foreign key).
+   * Never an e-mail address. Never published.
+   */
+  ref?: string;
   revoked?: { date: string; reason?: string };
 }
 

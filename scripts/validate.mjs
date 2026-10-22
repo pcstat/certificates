@@ -137,6 +137,8 @@ for (const rel of files) {
     if (!nonEmpty(r.name)) err(rel, `${who}: "name" is required`);
     checkFields(who, r.fields, scoped("recipient", "either"));
     if (r.note !== undefined && typeof r.note !== "string") err(rel, `${who}: "note" must be text`);
+    if (r.ref !== undefined && typeof r.ref !== "string") err(rel, `${who}: "ref" must be text`);
+    if (typeof r.ref === "string" && /@/.test(r.ref)) warn(rel, `${who}: "ref" looks like an e-mail address — use a roll number or student id; e-mail addresses do not belong in this repository`);
     if (r.revoked !== undefined) {
       if (!isObject(r.revoked) || !isIsoDate(r.revoked.date)) err(rel, `${who}: "revoked" needs a "date" written 2026-06-15`);
       else if (r.revoked.reason !== undefined && typeof r.revoked.reason !== "string") err(rel, `${who}: "revoked.reason" must be text`);

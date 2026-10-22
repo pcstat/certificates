@@ -28,7 +28,7 @@ export function listSetFiles() {
 export function publicSet(set) {
   const people = {};
   for (const [id, person] of Object.entries(set.people ?? {})) {
-    const { note: _note, ...rest } = person;
+    const { note: _note, ref: _ref, ...rest } = person;
     people[id] = rest;
   }
   return { code: set.code, certificate: set.certificate, people };
